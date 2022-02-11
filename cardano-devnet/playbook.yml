@@ -24,7 +24,8 @@
         labels:
           os: ubuntu
           distro: focal
-        cmd: /root/cardano_devnet/scripts/automate.sh
+        # 1 at the end will tell the automate process not to remove the stateful blockchain data on subsequent calls
+        cmd: /root/cardano_devnet/scripts/automate.sh 1
         working_dir: /root/cardano_devnet/
         environment:
           PATH: "/root/bin:${PATH}"
