@@ -1,0 +1,63 @@
+---
+
+name: CD | Build Cardano Node Image
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'cardano-devnet/**'
+      - '.github/workflows/cd.cardano-devnet.image.yml'
+
+env:
+  IMAGE_NAME: cardano-devnet
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        cardano-node-version: [ 1.33.0 ]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+
+      - name: free up space on the build server
+        run: |
+          ./.github/scripts/free_space.sh
+
+      - name: authenticate with the ghcr.io container registry
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u grzegorznowak --password-stdin
+
+      - name: install buildah
+        run: |
+          . /etc/os-release
+          sudo sh -c "echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/x${ID^}_${VERSION_ID}/ /' > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"
+          wget -nv https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/x${ID^}_${VERSION_ID}/Release.key -O Release.key
+          sudo apt-key add - < Release.key
+          sudo apt-get update -qq
+          sudo apt-get -qq -y install buildah
+
+      - name: install podman
+        run: |
+          . /etc/os-release
+          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+          curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install podman
+
+      - name: install ansible-bender and ansible deps
+        run: |
+          pip install -r ${IMAGE_NAME}/requirements.txt
+
+      - name: build the image
+        run: |
+          CARDANO_NODE_VERSION=${{ matrix.cardano-node-version }} ansible-bender build ${IMAGE_NAME}/playbook.yml
+
+      - name: publish the image
+        run: |
+          buildah tag localhost/${IMAGE_NAME} ghcr.io/grzegorznowak/${IMAGE_NAME}:${{ matrix.cardano-node-version }}
+          buildah push ghcr.io/grzegorznowak/${IMAGE_NAME}:${{ matrix.cardano-node-version }}

@@ -1,0 +1,40 @@
+---
+
+### CORE PROVISIONING ###
+- name: Converge common for all
+  hosts: all
+  vars:
+    cardano_devnet_repo: https://github.com/woofpool/cardano-private-testnet-setup.git
+    # sha/version to check out to
+    cardano_devnet_script_version: main
+    cardano_devnet_path: "/root/cardano_devnet"
+    cardano_node_socket_path: "/root/cardano_devnet/private-testnet/node-bft1/node.sock"
+
+    ansible_bender:
+      base_image: "ghcr.io/grzegorznowak/cardano-node:{{ lookup('env', 'CARDANO_NODE_VERSION') }}"
+      squash: false
+      layering: true
+      cache_tasks: false
+      working_container:
+        volumes:
+          - "{{ playbook_dir }}:/src"
+      
+      target_image:
+        name: cardano-devnet
+        labels:
+          os: ubuntu
+          distro: focal
+        cmd: /root/cardano_devnet/scripts/automate.sh
+        working_dir: /root/cardano_devnet/
+        environment:
+          PATH: "/root/bin:${PATH}"
+          CARDANO_NODE_SOCKET_PATH: "{{ cardano_node_socket_path }}"
+
+  post_tasks:
+
+    - name: Git checkout the devnet repo scripts
+      git:
+        repo: "{{ cardano_devnet_repo }}"
+        dest: "{{ cardano_devnet_path }}"
+        version: "{{ cardano_devnet_script_version }}"
+        force: true
