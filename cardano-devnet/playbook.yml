@@ -6,7 +6,7 @@
   vars:
     cardano_devnet_repo: https://github.com/woofpool/cardano-private-testnet-setup.git
     # sha/version to check out to
-    cardano_devnet_script_version: issue/11
+    cardano_devnet_script_version: main
     cardano_devnet_path: "/root/cardano_devnet"
     cardano_node_socket_path: "/root/cardano_devnet/private-testnet/node-bft1/node.sock"
 
